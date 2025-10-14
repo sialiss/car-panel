@@ -7,12 +7,19 @@ export const useVehiclesStore = defineStore('vehicles', () => {
   const items = ref<Vehicle[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const page = ref(1)
+  const pageSize = ref(7)
+
+  const sorted = ref<Vehicle[]>([])
+  const paginated = computed(() => {
+    const start = (page.value - 1) * pageSize.value
+    return sorted.value.slice(start, start + pageSize.value)
+  })
 
   async function load() {
     loading.value = true
     error.value = null
     try {
-      // сначала попробуем загрузить из localStorage (если есть), иначе с API
       const local = localStorage.getItem('vehicles_cache')
       if (local) {
         items.value = JSON.parse(local) as Vehicle[]
@@ -21,12 +28,9 @@ export const useVehiclesStore = defineStore('vehicles', () => {
         items.value = data
         localStorage.setItem('vehicles_cache', JSON.stringify(data))
       }
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        error.value = e.message
-      } else {
-        error.value = 'Неизвестная ошибка'
-      }
+      sorted.value = [...items.value]
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }
@@ -54,42 +58,36 @@ export const useVehiclesStore = defineStore('vehicles', () => {
     return true
   }
 
-  function remove(id: number) {
-    items.value = items.value.filter((x) => x.id !== id)
-    saveToLocal()
-  }
-
   // сортировка: по year и price
-  const sortKey = ref<'year' | 'price' | null>(null)
-  const sortOrder = ref<'asc' | 'desc'>('asc')
-
   function setSort(key: 'year' | 'price' | null, order: 'asc' | 'desc' = 'asc') {
-    sortKey.value = key
-    sortOrder.value = order
+    if (!key) {
+      sorted.value = [...items.value]
+      return
+    }
+    sorted.value = [...items.value].sort((a, b) =>
+      order === 'asc' ? a[key] - b[key] : b[key] - a[key],
+    )
+
   }
 
-  const sorted = computed(() => {
-    if (!sortKey.value) return items.value
-    return [...items.value].sort((a, b) => {
-      const av = a[sortKey.value!] as number
-      const bv = b[sortKey.value!] as number
-      if (av === bv) return 0
-      return sortOrder.value === 'asc' ? av - bv : bv - av
-    })
-  })
+  function remove(id: number) {
+    items.value = items.value.filter((v) => v.id !== id)
+    sorted.value = sorted.value.filter((v) => v.id !== id)
+    localStorage.setItem('vehicles_cache', JSON.stringify(items.value))
+  }
 
   return {
     items,
-    loading,
-    error,
+    sorted,
+    paginated,
+    page,
+    pageSize,
     load,
     create,
     update,
     remove,
-    sorted,
     setSort,
-    sortKey,
-    sortOrder,
-    saveToLocal,
+    loading,
+    error,
   }
 })

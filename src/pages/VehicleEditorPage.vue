@@ -28,6 +28,7 @@ function save(payload: Partial<Vehicle>) {
   store.update(id, payload)
   router.push({ name: 'vehicles' })
 }
+
 function cancel() {
   router.back()
 }
