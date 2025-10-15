@@ -8,7 +8,15 @@ export const useVehiclesStore = defineStore('vehicles', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const page = ref(1)
-  const pageSize = ref(7)
+  const pageSize = ref(4)
+
+  let sortkey: {
+    key: 'year' | 'price' | null
+    order: 'asc' | 'desc'
+  } = {
+    key: null,
+    order: 'asc',
+  }
 
   const sorted = ref<Vehicle[]>([])
   const paginated = computed(() => {
@@ -29,6 +37,7 @@ export const useVehiclesStore = defineStore('vehicles', () => {
         localStorage.setItem('vehicles_cache', JSON.stringify(data))
       }
       sorted.value = [...items.value]
+      setSort(sortkey.key, sortkey.order)
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -41,7 +50,7 @@ export const useVehiclesStore = defineStore('vehicles', () => {
   }
 
   function create(v: Omit<Vehicle, 'id'>) {
-    // генерируем id клиент-side
+    // генерируем id
     const id = items.value.length ? Math.max(...items.value.map((x) => x.id)) + 1 : 1
     const newV: Vehicle = { id, ...v }
     items.value.unshift(newV)
@@ -49,11 +58,13 @@ export const useVehiclesStore = defineStore('vehicles', () => {
     return newV
   }
 
-  function update(id: number, patch: Partial<Vehicle>) {
+  function update(id: number, data: Partial<Vehicle>) {
     const idx = items.value.findIndex((x) => x.id === id)
     if (idx === -1) return false
 
-    items.value[idx] = { ...items.value[idx], ...patch } as Vehicle
+    items.value[idx] = { ...items.value[idx], ...data } as Vehicle
+    sorted.value = [...items.value]
+    setSort(sortkey.key, sortkey.order)
     saveToLocal()
     return true
   }
@@ -64,10 +75,11 @@ export const useVehiclesStore = defineStore('vehicles', () => {
       sorted.value = [...items.value]
       return
     }
+    sortkey = { key, order }
     sorted.value = [...items.value].sort((a, b) =>
       order === 'asc' ? a[key] - b[key] : b[key] - a[key],
     )
-
+    console.log(sorted.value)
   }
 
   function remove(id: number) {

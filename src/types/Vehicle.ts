@@ -5,6 +5,6 @@ export interface Vehicle {
   year: number
   color: string
   price: number
-  latitude: number
-  longitude: number
+  latitude?: number
+  longitude?: number
 }
