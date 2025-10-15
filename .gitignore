@@ -28,3 +28,7 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+gh-pages.js
+.env
+.env.gh-pages
